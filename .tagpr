@@ -1,0 +1,6 @@
+[tagpr]
+	releaseBranch = main
+	versionFile = herdr-plugin.toml
+	vPrefix = true
+	changelog = true
+	release = false

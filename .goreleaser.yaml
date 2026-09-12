@@ -1,0 +1,51 @@
+version: 2
+project_name: herdr-codex-confirm
+
+before:
+  hooks:
+    - sh scripts/licenses.sh
+
+builds:
+  - main: .
+    binary: herdr-codex-confirm
+    env:
+      - CGO_ENABLED=0
+    goos: [darwin, linux]
+    goarch: [amd64, arm64]
+    flags: [-trimpath]
+    ldflags:
+      - -s -w -X main.version={{ .Version }}
+
+archives:
+  - formats: [tar.gz]
+    name_template: "herdr-codex-confirm_v{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    files:
+      - LICENSE
+      - THIRD_PARTY_NOTICES
+
+checksum:
+  name_template: checksums.txt
+
+changelog:
+  use: github-native
+
+# Use the manifest version to test the installer's exact asset names.
+snapshot:
+  version_template: "{{ .Env.RELEASE_VERSION }}"
+
+signs:
+  - cmd: ssh-keygen
+    args:
+      - "-Y"
+      - sign
+      - "-f"
+      - "{{ .Env.RELEASE_SIGNING_KEY_FILE }}"
+      - "-n"
+      - herdr-codex-confirm-release
+      - "${artifact}"
+    signature: "${artifact}.sig"
+    artifacts: checksum
+
+release:
+  use_existing_draft: true
+  replace_existing_artifacts: true

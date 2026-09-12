@@ -1,0 +1,21 @@
+{
+  "patterns": [
+    ["git", "push|commit"],
+    ["gh", "pr", "create|close|comment|edit|lock|merge|ready|reopen|revert|review|unlock|update-branch"],
+    ["gh", "issue", "create|close|comment|delete|develop|edit|lock|pin|reopen|transfer|unlock|unpin"],
+    ["gh", "repo", "create|archive|autolink|delete|deploy-key|edit|fork|rename|set-default|sync|unarchive"],
+    ["gh", "release", "create|delete|delete-asset|edit|upload"],
+    ["gh", "gist", "create|delete|edit|rename"],
+    ["gh", "workflow", "disable|enable|run"],
+    ["gh", "run", "cancel|delete|rerun"],
+    ["gh", "label", "clone|create|delete|edit"],
+    ["gh", "secret", "delete|set"],
+    ["gh", "variable", "delete|set"],
+    ["gh", "project", "close|copy|create|delete|edit|field-create|field-delete|item-add|item-archive|item-create|item-delete|item-edit|link|mark-template|unlink"],
+    ["gh", "cache", "delete"],
+    ["gh", "codespace", "create|delete|edit|rebuild|stop"],
+    ["gh", "ssh-key", "add|delete"],
+    ["gh", "gpg-key", "add|delete"],
+    ["gh", "auth", "login|logout|refresh|setup-git|switch"]
+  ]
+}

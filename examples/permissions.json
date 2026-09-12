@@ -1,0 +1,7 @@
+{
+  "patterns": [
+    ["git", "commit|push"],
+    ["gh", "pr", "create|merge|close"],
+    ["gh", "issue", "create|edit|close"]
+  ]
+}

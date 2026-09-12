@@ -1,0 +1,104 @@
+name: tagpr
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing release tag to publish or retry, e.g. v0.1.0"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: read
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate requested tag
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          INPUT_TAG: ${{ inputs.tag }}
+        run: '[[ "$INPUT_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]'
+
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag && format('refs/tags/{0}', inputs.tag) || github.ref }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - id: tagpr
+        if: github.event_name == 'push'
+        uses: Songmu/tagpr@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # Tags created with GITHUB_TOKEN do not trigger another push workflow.
+      - id: release
+        env:
+          TAGPR_TAG: ${{ steps.tagpr.outputs.tag }}
+          INPUT_TAG: ${{ inputs.tag }}
+        run: |
+          tag="${TAGPR_TAG:-$INPUT_TAG}"
+          if [ -n "$tag" ]; then
+            [[ "$tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || exit 1
+          fi
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/checkout@v4
+        if: steps.release.outputs.tag != ''
+        with:
+          ref: refs/tags/${{ steps.release.outputs.tag }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Check tag matches manifest
+        if: steps.release.outputs.tag != ''
+        env:
+          TAG: ${{ steps.release.outputs.tag }}
+        run: sh scripts/check-tag-version.sh "$TAG"
+
+      - uses: actions/setup-go@v5
+        if: steps.release.outputs.tag != ''
+        with:
+          go-version-file: go.mod
+
+      - name: Test
+        if: steps.release.outputs.tag != ''
+        run: |
+          go vet ./...
+          go test -race ./...
+
+      - name: Prepare and check signing key
+        if: steps.release.outputs.tag != ''
+        env:
+          RELEASE_SIGNING_KEY: ${{ secrets.RELEASE_SIGNING_KEY }}
+        run: |
+          test -n "$RELEASE_SIGNING_KEY" || { echo 'RELEASE_SIGNING_KEY is not configured.' >&2; exit 1; }
+          umask 077
+          printf '%s\n' "$RELEASE_SIGNING_KEY" > "$RUNNER_TEMP/release_signing_key"
+          printf 'release signing key check\n' > "$RUNNER_TEMP/signing-probe"
+          ssh-keygen -Y sign -f "$RUNNER_TEMP/release_signing_key" -n herdr-codex-confirm-release "$RUNNER_TEMP/signing-probe"
+          ssh-keygen -Y verify -f release/signing-key.pub -I herdr-codex-confirm-release -n herdr-codex-confirm-release \
+            -s "$RUNNER_TEMP/signing-probe.sig" < "$RUNNER_TEMP/signing-probe"
+
+      - uses: goreleaser/goreleaser-action@v6
+        if: steps.release.outputs.tag != ''
+        with:
+          version: "~> v2"
+          args: release --clean
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GORELEASER_CURRENT_TAG: ${{ steps.release.outputs.tag }}
+          RELEASE_SIGNING_KEY_FILE: ${{ runner.temp }}/release_signing_key
+
+      - name: Remove signing key
+        if: always()
+        run: rm -f "$RUNNER_TEMP/release_signing_key" "$RUNNER_TEMP/signing-probe" "$RUNNER_TEMP/signing-probe.sig"

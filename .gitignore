@@ -30,3 +30,9 @@ go.work.sum
 # Editor/IDE
 # .idea/
 # .vscode/
+
+docs/ai
+
+/herdr-codex-confirm
+/dist/
+/THIRD_PARTY_NOTICES

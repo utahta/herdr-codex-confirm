@@ -1,0 +1,17 @@
+id = "utahta.codex-confirm"
+name = "Codex Confirm"
+version = "0.1.0"
+min_herdr_version = "0.8.0"
+description = "Confirm selected Codex shell commands before execution."
+platforms = ["macos", "linux"]
+
+[[build]]
+command = ["sh", "install.sh"]
+
+[[panes]]
+id = "confirm"
+title = "Codex Confirm"
+placement = "popup"
+width = 90
+height = 18
+command = ["./herdr-codex-confirm", "popup"]
